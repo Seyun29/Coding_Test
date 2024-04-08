@@ -1,97 +1,99 @@
 import sys
-#left, top, right, bottom, nothing
-dx = [-1, 0, 1, 0]
-dy = [0, 1, 0, -1]
+#left, top, right, bottom
+dx = [0, -1, 0, 1]
+dy = [-1, 0, 1, 0]
+dirs = ['left', 'top', 'right', 'bottom']
+def next_pos(pos,dir):
+    global board
+    return [pos[0]+dx[dir], pos[1]+dy[dir], board[pos[0]+dx[dir]][pos[1]+dy[dir]]]
 
-sysInput = sys.stdin.readline
+def forbidden_dirs(dir):
+    if dir == -1:
+        return []
+    elif dir == 0:
+        return [0,2]
+    elif dir== 1:
+        return [1,3]
+    elif dir==2:
+        return [0,2]
+    else:
+        return [1,3]
+def print_board():
+    global board
+    for row in board:
+        print(row)
 
-n,m = map(int,sysInput().split())
+sys_input = sys.stdin.readline
+
+n,m = map(int,sys_input().split())
 
 board = list()
-redPos, bluePos, holePos = [-1, -1], [-1, -1], [-1, -1]
+red_pos, blue_pos = [-1, -1], [-1, -1]
 
 for i in range(n):
-    string = sysInput()[:-1]
+    string = sys_input()[:-1]
     board.append(list(string))
     for k in range(m):
         if string[k] == 'R':
-            redPos = [i,k]
+            red_pos = [i,k]
             board[i][k] = '.'
         elif string[k] == 'B':
-            bluePos = [i,k]
+            blue_pos = [i,k]
             board[i][k] = '.'
-        elif string[k] == 'O':
-            holePos = [i,k]
 
-minCnt = 10
-def moveOnce(dir, redPos, bluePos):
-    newRed, newBlue = redPos, bluePos
+# 1. move both balls, while facing '.', if result position is same, then adjust the positions
+def moveBalls(prev_red, prev_blue, dir):
     global board
-
-    if bluePos[0]+dx[dir] == redPos[0] and bluePos[1]+dy[dir] == redPos[1]:
-        if board[redPos[0]+dx[dir]][redPos[1]+dy[dir]] == '.':
-            new_Red, newBlue = [redPos[0]+dx[dir], redPos[1]+dy[dir]], [bluePos[0]+dx[dir], bluePos[1]+dy[dir]]
-        elif board[redPos[0]+dx[dir]][redPos[1]+dy[dir]] == 'O':
-            #Red가 빠진 경우 (성공)
-            return 'success'
-        else:
-            return False
-
-    elif redPos[0]+dx[dir] == bluePos[0] and redPos[1]+dy[dir] == bluePos[1]:
-        if board[bluePos[0]+dx[dir]][bluePos[1]+dy[dir]] == '.':
-            newRed, newBlue = [redPos[0]+dx[dir],redPos[1]+dy[dir]], [bluePos[0]+dx[dir], bluePos[1]+dy[dir]]
-        elif board[bluePos[0]+dx[dir]][bluePos[1]+dy[dir]] == 'O':
-            #Blue가 빠진 경우 (실패)
-            return 'fail'
-        else:
-            return False
-
+    current = {
+        'red' : prev_red,
+        'blue' : prev_blue
+    }
+    order = ['red', 'blue']
+    if dir == 0:
+        order.sort(key = lambda item: current[item][1])
+    elif dir == 1:
+        order.sort(key = lambda item: current[item][0])
+    elif dir == 2:
+        order.sort(key=lambda item: current[item][1], reverse=True)
     else:
-        if board[bluePos[0] + dx[dir]][bluePos[1] + dy[dir]] == 'O':
-            #blue가 빠진 경우 (실패)
-            return 'fail'
-        elif board[redPos[0] + dx[dir]][redPos[1] + dy[dir]] == 'O':
-            #red가 빠진 경우 (성공)
-            return 'success'
-        if board[bluePos[0]+dx[dir]][bluePos[1]+dy[dir]] == '.':
-            newBlue = [bluePos[0]+dx[dir], bluePos[1]+dy[dir]]
-        if board[redPos[0]+dx[dir]][redPos[1]+dy[dir]] == '.':
-            newRed = [redPos[0]+dx[dir], redPos[1]+dy[dir]]
-        elif board[bluePos[0]+dx[dir]][bluePos[1]+dy[dir]] == '#' and board[redPos[0]+dx[dir]][redPos[1]+dy[dir]] == '#':
-            return False
+        order.sort(key=lambda item: current[item][0], reverse=True)
 
-    return newRed, newBlue
+    for item in order:
+        cur_pos = current[item]
+        while (next_pos(cur_pos,dir)[2] == '.'):
+            cur_pos = next_pos(cur_pos,dir)[:2]
+        current[item] = cur_pos
 
-def move(curCnt, redPos, bluePos, prevDir):
-    global board, minCnt
-    curRed, curBlue = redPos, bluePos
-    if (curCnt>=10):
-        return False
+    if current[order[0]] == current[order[1]]:
+        current[order[1]] =[current[order[1]][0]-dx[dir], current[order[1]][1]-dy[dir]]
 
+    return current['red'], current['blue'], True if prev_red != current['red'] or prev_blue != current['blue'] else False
+
+results = []
+def move(cnt, red_pos, blue_pos, prev_dir):
+    global results
+    if (cnt >= 10):
+        results.append(100)
+        return
+    cnt+=1
     for dir in range(4):
-        if dir != prevDir:
-            #끝까지 이동
-            while(True):
-                res = moveOnce(dir, curRed, curBlue)
-                if res == 'success':
-                    minCnt = min(minCnt, curCnt + 1)
-                    return True
-                elif not res:
-                    #공 두개가 더 이상 움직일 수 없는 경우
-                    break
-                elif res == 'fail':
-                    #파란공이 빠진 경우
-                    return False
-                else:
-                    curRed, curBlue = res[0], res[1]
-
-            if (curRed != redPos or curBlue != bluePos):
-                move(curCnt + 1, curRed, curBlue, dir)
-
-            elif not res:
-                return False
+        if dir not in forbidden_dirs(prev_dir):
+            print(cnt, dirs[dir], red_pos, blue_pos)
+            new_red_pos, new_blue_pos, res = moveBalls(red_pos, blue_pos, dir)
+            if not res:
+                continue
+            elif next_pos(new_blue_pos, dir)[2] == 'O':
+                return
+            elif next_pos(new_red_pos, dir)[2] == 'O':
+                results.append(cnt)
+                return
             else:
-                move(curCnt+1, res[0], res[1], dir)
+                move(cnt, new_red_pos, new_blue_pos, dir)
+move(0, red_pos, blue_pos, -1)
+print(results)
+print(-1 if min(results) > 10 else min(results))
 
-move(0, redPos, bluePos, -1)
-print(-1 if minCnt >= 10 else minCnt)
+
+
+
+
