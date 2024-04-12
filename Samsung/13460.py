@@ -1,5 +1,6 @@
 import sys
 #left, top, right, bottom
+#튜플, 리스트 값 비교 확인하기, list concatenation
 dx = [0, -1, 0, 1]
 dy = [-1, 0, 1, 0]
 dirs = ['left', 'top', 'right', 'bottom']
@@ -8,8 +9,8 @@ def next_pos(pos,dir):
     new_row = pos[0]+dx[dir]
     new_col = pos[1]+dy[dir]
     if (0 <= new_row < n) and (0 <= new_col < m):
-        return new_row, new_col, board[new_row][new_col]
-    return new_row, new_col, '#'
+        return [new_row, new_col, board[new_row][new_col]]
+    return [new_row, new_col, '#']
 
 def print_board():
     global board
@@ -63,10 +64,12 @@ def moveBalls(prev_red, prev_blue, dir):
     return current['red'], current['blue'], True if prev_red != current['red'] or prev_blue != current['blue'] else False
 
 results = []
-def move(cnt, red_pos, blue_pos, prev_dir, paths):
-    global results
+paths = []
+def move(cnt, red_pos, blue_pos, prev_dir, path):
+    global results, paths
     if (cnt >= 10):
         results.append(100)
+        paths.append([])
         return
     cnt += 1
     for dir in range(4):
@@ -77,16 +80,16 @@ def move(cnt, red_pos, blue_pos, prev_dir, paths):
             elif next_pos(new_red_pos, dir)[2] == 'O':
                 if next_pos(next_pos(new_blue_pos, dir)[:2], dir)[2] != 'O':
                     results.append(cnt)
+                    paths.append(path+[dirs[dir]]+[new_blue_pos, new_red_pos])
                     return
                 else:
                     continue
-            if not moved:
-                continue
-            else:
-                move(cnt, new_red_pos, new_blue_pos, dir, paths)
+            elif moved:
+                move(cnt, new_red_pos, new_blue_pos, dir, path+[dirs[dir]]+[new_blue_pos, new_red_pos])
 move(0, red_pos, blue_pos, -1, [])
 # print(results)
 if len(results) == 0:
     print(-1)
 else:
     print(-1 if min(results) > 10 else min(results))
+    # print(paths[results.index(min(results))])
